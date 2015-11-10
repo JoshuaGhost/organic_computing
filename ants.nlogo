@@ -20,6 +20,7 @@ to init
 
   ask patches [
     set food 0
+    set nest? false
     ifelse (pcolor >= 30 and pcolor <= 39) [
       set pcolor 34;braun, stands for wall
       set wall? true
@@ -32,6 +33,7 @@ to init
       set pcolor 95;blue, stands for pile of food 2
       set food 2
     ]
+
   ]
   ask patch 6 -1 [
     set pcolor 34
@@ -39,6 +41,7 @@ to init
   ]
   ask patch 0 0 [
     set pcolor 15;nest
+    set nest? true
   ]
 
   crt population [; initial position at (0, 0), which also stands for the nest of ants
@@ -67,15 +70,54 @@ to hill-climbing-nest
     [ lt 45 ] ]
 end
 
+to emit-pheromone
+  ask patch xcor ycor [
+    set pheromone pheromone + 60
+  ]
+end
+
+to hill-climbing-pheromone
+  let scent-ahead [pheromone] of patch round ( xcor + sin heading ) round ( ycor + cos heading )
+  let scent-right [pheromone] of patch round ( xcor + sin (heading + 45)) round ( ycor + cos (heading + 45))
+  let scent-left  [pheromone] of patch round ( xcor + sin (heading - 45)) round ( ycor + cos (heading - 45))
+  if (scent-right > scent-ahead) or (scent-left > scent-ahead) [
+    ifelse scent-right > scent-left [
+      rt 45
+    ][
+      lt 45
+    ]
+  ]
+end
+
 to go
+
   diffuse pheromone ( diffusion_rate / 100 )
+
+  ask patches [
+    if wall-block-pheromone = 1 [
+      if wall? [
+        set pheromone 0
+      ]
+    ]
+    if not nest? and food = 0 [
+      if not wall? [
+        set pcolor 40 + 10 * (pheromone / 100)
+      ]
+      set pheromone pheromone * (100 - evaporation-rate) / 100
+    ]
+  ]
+
   ask turtles [
     ifelse go-home? [
       hill-climbing-nest
+      emit-pheromone
     ][
-      rt random 40
-      lt random 40
+      if ([pheromone] of patch xcor ycor >= 0.05) and ([pheromone] of patch xcor ycor < 2) [
+        hill-climbing-pheromone
+      ]
     ]
+    rt random 40
+    lt random 40
     let next-step-x round ( xcor + sin heading )
     let next-step-y round ( ycor + cos heading )
     ifelse ( [wall?] of ( patch next-step-x next-step-y ) ) [
@@ -86,8 +128,10 @@ to go
     ]
     if round (distancexy 0 0) = 0 [
       set go-home? false
+      rt 180
     ]
-    if (([food] of patch xcor ycor) != 0) [
+    if (([food] of patch xcor ycor) != 0 and not go-home?) [
+      rt 180
       ask patch xcor ycor [
         set pcolor 0
         set food 0
@@ -98,9 +142,9 @@ to go
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-210
+242
 10
-649
+681
 470
 16
 16
@@ -125,10 +169,10 @@ ticks
 30.0
 
 BUTTON
-95
-92
-158
-125
+37
+48
+100
+81
 NIL
 init
 NIL
@@ -142,40 +186,40 @@ NIL
 1
 
 SLIDER
-20
-169
-192
-202
+35
+131
+207
+164
 population
 population
 1
-50
-50
+100
+100
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-28
-254
-200
-287
+35
+195
+207
+228
 diffusion_rate
 diffusion_rate
 0
 100
-50
+22
 1
 1
 NIL
 HORIZONTAL
 
 BUTTON
-47
-131
-110
-164
+146
+49
+209
+82
 NIL
 go
 T
@@ -187,6 +231,32 @@ NIL
 NIL
 NIL
 1
+
+SLIDER
+35
+164
+207
+197
+evaporation-rate
+evaporation-rate
+0
+100
+9
+1
+1
+NIL
+HORIZONTAL
+
+SWITCH
+25
+256
+221
+289
+wall-block-pheromone
+wall-block-pheromone
+0
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
