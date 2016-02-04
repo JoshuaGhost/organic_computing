@@ -21,4 +21,5 @@ public class AbstractHuman extends AbstractPlayer{
 		return "Selbst spielen";
 	}
 	
+	
 }
